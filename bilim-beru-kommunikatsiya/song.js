@@ -31,8 +31,34 @@ Object.entries(sc.S).forEach(([k, [t0]], i) => {
 for (const n of [m('C4'), m('E4'), m('G4'), m('C5')]) { const { L, R } = I.padNote(n, 3.2, { attack: 0.01, release: 1.5 }); lead.addStereo(L, R, T(TOTAL_BARS), 0.14); }
 fx.addMono(I.crash(3), B.end.t0, 0.2);
 
-// дикторлық мәтін (espeak-ng, қазақ тілі) және музыканы басу
-const vo = Voice.speak(sc.vo, { out: path.join(__dirname, 'out'), length: DURATION, engine: 'espeak-ng', voice: 'kk', rate: 135 });
+// дикторлық мәтін: ElevenLabs қазақ дауысы (Айжан), дайын MP3 файлдары voice/ қалтасында
+const fs = require('fs');
+const { OnePole } = require('./engine/audio/dsp');
+const clean = (s) => String(s).replace(/\s+/g, ' ').trim();
+const kkSyl = (w) => Math.max(1, (String(w).toLowerCase().match(/[аәеёиіоөуұүыэюя]+/g) || []).length);
+const energy = (x) => { const hop = SR / 100, e = new Float32Array(Math.floor(x.length / hop)); for (let i = 0; i < e.length; i++) { let q = 0; for (let j = 0; j < hop; j++) { const v = x[i * hop + j]; q += v * v; } e[i] = Math.sqrt(q / hop); } return e; };
+const trim = (x) => { const e = energy(x), pk = e.reduce((a, v) => Math.max(a, v), 0); let a = 0, b = e.length; while (a < b && e[a] < pk * 0.02) a++; while (b > a && e[b - 1] < pk * 0.02) b--; return x.slice(Math.max(0, (a - 3) * SR / 100), Math.min(x.length, (b + 3) * SR / 100)); };
+const vo = (() => {
+  const placed = sc.vo.map((l, i) => {
+    const audio = trim(Voice.decode(path.join(__dirname, 'voice', `n${String(i + 1).padStart(2, '0')}.mp3`)));
+    const ws = clean(l.text).split(' ').filter((w) => /[\p{L}\p{N}]/u.test(w));
+    const words = Voice.fit(audio, ws, ws.map(kkSyl)).map((w) => ({ w: w.w, t: +(l.at + w.t).toFixed(3), end: +(l.at + w.end).toFixed(3) }));
+    return { l, audio, dur: audio.length / SR, words };
+  });
+  const bus = new Bus(N), hp = new OnePole();
+  for (const p of placed) {
+    if (p.l.at + p.dur > DURATION - 0.2) throw new Error(`voice line at ${p.l.at} ends after the film`);
+    let q = 0, c = 0; for (let i = 0; i < p.audio.length; i++) if (Math.abs(p.audio[i]) > 0.01) { q += p.audio[i] * p.audio[i]; c++; }
+    const g = c ? Math.min(6, 0.12 / Math.sqrt(q / c)) : 0;
+    const x = new Float32Array(p.audio.length);
+    for (let i = 0; i < x.length; i++) x[i] = hp.hp(p.audio[i] * g, 90);
+    bus.addMono(x, p.l.at, 1, 0);
+  }
+  const out = { engine: 'elevenlabs', lines: placed.map((p) => ({ t: +p.l.at.toFixed(3), end: +(p.l.at + p.dur).toFixed(3), text: clean(p.l.text), who: p.l.who, words: p.words })), mouth: Voice.mouthTrack(bus, 30) };
+  fs.writeFileSync(path.join(__dirname, 'out', 'voice.json'), JSON.stringify(out));
+  out.bus = bus;
+  return out;
+})();
 const music = [buses.drums, buses.bass, buses.pad, buses.keys, lead];
 MIX.duck(music, vo.bus, { depth: 0.6 });
 

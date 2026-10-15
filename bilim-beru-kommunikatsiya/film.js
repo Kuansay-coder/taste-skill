@@ -46,7 +46,7 @@
     colleague: { outfit: 'suit', robe: '#2C3550', hairStyle: 'short', glasses: 'square', skin: '#F3D2B3' },
   };
   const person = (ctx, who, x, y, s, o = {}) => Ch.person(ctx, { x, y, s, pose: 'stand', style: ST[who], seed: 100 + who.length * 13, ...o });
-  const open = (t, k = 0) => (Math.sin(t * 11 + k * 3) > 0 ? 'open' : 'smile'); // сөйлеп тұрғандай ауыз
+  const open = () => 'smile'; // оқушылар үнсіз: тек диктор (мұғалім) сөйлейді
 
   // ---------- белгішелер ----------
   const iPerson = (ctx, x, y, s, col) => { G.ellipse(ctx, x, y - 50 * s, 26 * s, 26 * s, { fill: col, lw: 4, seed: 11 }); G.rrect(ctx, x - 44 * s, y - 14 * s, 88 * s, 70 * s, 30 * s, { fill: col, lw: 4, seed: 12 }); };
@@ -87,7 +87,7 @@
     txt(ctx, 'КОММУНИКАЦИЯ', 960, 260, 120, C.teal, { align: 'center', alpha: fade(t, t0 + BEAT) });
     G.text(ctx, 'латынша «communis» — ортақ, ортақтасу', 960, 330, { size: 50, fam: 'Caveat', weight: 700, color: C.ink, align: 'center', boil: 0, alpha: fade(t, A('define', 0.8)) });
     // екі адам
-    person(ctx, 'teacher', 330, FLOOR + 40, 0.95, { mouth: Math.floor((t - t0) / BAR) % 2 === 0 ? open(t) : 'smile', eyes: 'happy', look: 0.4, gesture: null });
+    person(ctx, 'teacher', 330, FLOOR + 40, 0.95, { mouth: talk(t), eyes: 'happy', look: 0.4, gesture: null });
     person(ctx, 'boy', 1590, FLOOR + 40, 0.95, { mouth: Math.floor((t - t0) / BAR) % 2 === 1 ? open(t, 2) : 'smile', eyes: 'happy', look: -0.4 });
     // ақпарат, ой, сезім: екі жаққа ұшып жүреді
     const items = [['ақпарат', C.blue], ['ой', C.orange], ['сезім', C.rose]];
@@ -144,7 +144,7 @@
     // 2-бөлік: мысал — хабар барып қайтады
     const t2 = B.model2.t0;
     floor(ctx);
-    person(ctx, 'teacher', 300, FLOOR + 40, 0.72, { mouth: t > t2 && t < A('model', 6.2) ? open(t) : 'smile', eyes: 'happy', look: 0.4 });
+    person(ctx, 'teacher', 300, FLOOR + 40, 0.72, { mouth: talk(t), eyes: 'happy', look: 0.4 });
     person(ctx, 'boy', 1620, FLOOR + 40, 0.72, { mouth: t > A('model', 6.4) ? open(t, 3) : 'smile', eyes: 'happy', look: -0.4 });
     G.bubble(ctx, 'Бүгін жаңа тақырып!', 520, 700, 340, 790, t, A('model', 4.5), A('model', 6.2), { size: 44 });
     G.bubble(ctx, 'Түсіндім! Мен...', 1400, 700, 1580, 790, t, A('model', 6.4), A('model', 7.9), { size: 44 });
